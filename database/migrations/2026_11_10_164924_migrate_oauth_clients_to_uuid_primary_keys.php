@@ -76,9 +76,15 @@ return new class extends Migration
             ->whereNotIn('client_id', fn ($q) => $q->select('id')->from('oauth_clients'))
             ->delete();
 
+        // Existing clients keep their ID, just as a string. Access tokens
+        // are JWTs whose "aud" claim carries the client ID they were issued
+        // for, and Passport looks the client up by that value on every
+        // request. Minting new UUIDs here would invalidate every API token
+        // issued before the upgrade. Clients created afterwards get UUIDs
+        // from Passport as usual; the char(36) column holds both.
         $idMap = [];
         foreach (DB::table('oauth_clients')->pluck('id') as $oldId) {
-            $idMap[(int) $oldId] = (string) Str::orderedUuid();
+            $idMap[(int) $oldId] = (string) $oldId;
         }
 
         if (! Schema::hasColumn('oauth_clients', 'id_uuid')) {
