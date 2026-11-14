@@ -34,6 +34,26 @@ window.SignaturePad = require('./signature_pad'); //ALSO WEIRD - but works
 require('jquery-validation')
 window.List = require('list.js')
 window.ClipboardJS = require('clipboard')
+
+/**
+ * Returns the given URL if it is safe to use as a form action (same-origin
+ * relative or http/https), otherwise null. Guards against javascript: and
+ * data: URLs ending up in a form's action attribute.
+ */
+function safeFormAction(url) {
+    if (typeof url !== 'string' || url === '') {
+        return null;
+    }
+
+    var parsed;
+    try {
+        parsed = new URL(url, window.location.href);
+    } catch (e) {
+        return null;
+    }
+
+    return (parsed.protocol === 'https:' || parsed.protocol === 'http:') ? parsed.href : null;
+}
 // TODO - find everything using moment.js and kill it or upgrade it? It's huge
 // - adminLTE (UGH)
 // - bootstrap-daterangepicker
@@ -378,12 +398,20 @@ $(function () {
         var headericon = $context.attr('data-icon');
         var title = $context.attr('data-title');
 
+        // The delete form may only post to an http(s) URL; anything else
+        // (e.g. a javascript: URL smuggled into the attribute) is refused.
+        var action = safeFormAction(href);
+        if (action === null) {
+            return false;
+        }
+
         // deleteForm is the ID of the modal form itself
-        $('#deleteForm').attr('action', href);
+        $('#deleteForm').attr('action', action);
         $dataConfirmModal.find('.modal-header-icon').addClass(headericon);
-        $dataConfirmModal.find('.modal-title').text('').text(title).prepend('<i class="fa ' + headericon + '"></i> ');
+        // Built as an element so the icon class can't inject markup.
+        $dataConfirmModal.find('.modal-title').text(title).prepend(' ').prepend($('<i>').addClass('fa').addClass(headericon));
         $dataConfirmModal.find('.modal-body').text('').text(message);
-        $dataConfirmModal.attr('action', href);
+        $dataConfirmModal.attr('action', action);
 
         // Fire the modal
         $dataConfirmModal.modal({
@@ -1197,7 +1225,7 @@ $(function () {
 		}
 	});
 	
-	$(".select2-hidden-accessible").on('select2:closing', function (e) {
+	$("select.js-data-ajax, select[data-endpoint]").on('select2:closing', function (e) {
 		var element = $(this);
 		var value = getSelect2Value(element);
 		var noForceAjax = false;
@@ -1207,9 +1235,12 @@ $(function () {
 		
 		if(value && !noForceAjax && !isMouseUp) {
 			var endpoint = element.data("endpoint");
+			if (!endpoint) { return; }
             var statusType = element.data("asset-status-type");
-			$.ajax({
-                url: baseUrl + 'api/v1/' + endpoint + '/selectlist?search=' + value + '&page=1' + (statusType ? '&statusType=' + statusType : ''),
+			var previous = element.data('selectlist-request');
+			if (previous && previous.readyState !== 4) { previous.abort(); }
+			var request = $.ajax({
+                url: baseUrl + 'api/v1/' + endpoint + '/selectlist?search=' + encodeURIComponent(value) + '&page=1' + (statusType ? '&statusType=' + statusType : ''),
 				dataType: 'json',
 				headers: {
 					"X-Requested-With": 'XMLHttpRequest',
@@ -1249,6 +1280,8 @@ $(function () {
 					});
 				}
 			});
+
+			element.data('selectlist-request', request);
 		}
 	});
 
@@ -2072,10 +2105,14 @@ $(document).ready(function () {
     // eye state doesn't visually drift between the two addons.
     $(document).on('click', '.toggle-password', function () {
         var toggleTarget = $(this).attr('data-toggle');
-        var $inputs = $(toggleTarget);
+        // find() only ever treats the value as a selector; $() would build
+        // elements from it if it looked like HTML.
+        var $inputs = $(document).find(toggleTarget);
         var reveal = $inputs.first().attr('type') === 'password';
         $inputs.attr('type', reveal ? 'text' : 'password');
-        var $eyes = $('.toggle-password[data-toggle="' + toggleTarget + '"]');
+        var $eyes = $('.toggle-password').filter(function () {
+            return $(this).attr('data-toggle') === toggleTarget;
+        });
         $eyes.toggleClass('fa-eye', ! reveal);
         $eyes.toggleClass('fa-eye-slash', reveal);
     });
