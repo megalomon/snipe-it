@@ -215,6 +215,19 @@ class Settings
         ]);
     }
 
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    public function enableOidc(array $overrides = []): Settings
+    {
+        return $this->update(array_merge([
+            'oidc_enabled' => 1,
+            'oidc_issuer' => 'https://id.example.com/realms/opendesk',
+            'oidc_client_id' => 'snipe-it',
+            'oidc_client_secret' => Crypt::encrypt('client-secret'),
+        ], $overrides));
+    }
+
     public function setEula($text = 'Default EULA text')
     {
         return $this->update(['default_eula_text' => $text]);

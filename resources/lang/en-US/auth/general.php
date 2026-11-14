@@ -16,4 +16,8 @@ return [
     'google_login_failed' => 'Google Login failed, please try again.',
     'invite_password_expires' => 'This password reset link will expire on :expire_date. You can use the manual password reset link to receive a new reset token by clicking here',
 
+    'oidc_login' => 'Login with OpenID Connect',
+    'oidc_login_failed' => 'Login via OpenID Connect failed, please try again.',
+    'oidc_no_account' => 'Your login was successful, but there is no active Snipe-IT account for you. Please contact your administrator.',
+
 ];

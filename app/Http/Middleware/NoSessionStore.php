@@ -9,6 +9,7 @@ class NoSessionStore
 {
     protected $except = [
         'health',
+        'oidc/backchannel-logout',
     ];
 
     /**

@@ -11,6 +11,7 @@ use App\Http\Requests\StoreLabelSettings;
 use App\Http\Requests\StoreLdapSettings;
 use App\Http\Requests\StoreLocalizationSettings;
 use App\Http\Requests\StoreNotificationSettings;
+use App\Http\Requests\StoreOidcSettings;
 use App\Http\Requests\StoreSecuritySettings;
 use App\Models\Actionlog;
 use App\Models\Asset;
@@ -905,6 +906,59 @@ class SettingsController extends Controller
         }
 
         return redirect()->back()->with('error', trans('general.feature_disabled'));
+    }
+
+    /**
+     * Show the OpenID Connect login settings form.
+     */
+    public function getOidcSettings(): View
+    {
+        $setting = Setting::getSettings();
+
+        return view('settings.oidc', [
+            'setting' => $setting,
+            'redirectUri' => route('oidc.callback'),
+            'postLogoutRedirectUri' => route('login'),
+            'backchannelLogoutUrl' => route('oidc.backchannel-logout'),
+        ]);
+    }
+
+    /**
+     * Save the OpenID Connect login settings.
+     */
+    public function postOidcSettings(StoreOidcSettings $request): RedirectResponse
+    {
+        if (config('app.lock_passwords')) {
+            return redirect()->back()->with('error', trans('general.feature_disabled'));
+        }
+
+        $setting = Setting::getSettings();
+
+        $setting->oidc_enabled = $request->boolean('oidc_enabled');
+        $setting->oidc_issuer = $request->filled('oidc_issuer') ? rtrim($request->input('oidc_issuer'), '/') : null;
+        $setting->oidc_client_id = $request->input('oidc_client_id');
+        $setting->oidc_scopes = $request->input('oidc_scopes');
+        $setting->oidc_username_claim = $request->input('oidc_username_claim');
+        $setting->oidc_groups_claim = $request->input('oidc_groups_claim');
+        $setting->oidc_button_label = $request->input('oidc_button_label');
+        $setting->oidc_forcelogin = $request->boolean('oidc_forcelogin');
+        $setting->oidc_slo = $request->boolean('oidc_slo');
+        $setting->oidc_provision_users = $request->boolean('oidc_provision_users');
+
+        // The secret is never echoed back into the form, so an empty field
+        // means "keep the stored one" unless clearing was explicitly asked for.
+        if ($request->boolean('oidc_clear_client_secret')) {
+            $setting->oidc_client_secret = null;
+        } elseif ($request->filled('oidc_client_secret')) {
+            $setting->oidc_client_secret = Crypt::encrypt($request->input('oidc_client_secret'));
+        }
+
+        if ($setting->save()) {
+            return redirect()->route('settings.oidc.index')
+                ->with('success', trans('admin/settings/message.update.success'));
+        }
+
+        return redirect()->back()->withInput()->withErrors($setting->getErrors());
     }
 
     /**

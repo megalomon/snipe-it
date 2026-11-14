@@ -17,7 +17,25 @@
 
                 <div class="col-md-4 col-md-offset-4">
 
-                    @if (($snipeSettings->google_login=='1') && ($snipeSettings->google_client_id!='') && ($snipeSettings->google_client_secret!=''))
+                    @php
+                        // OIDC as primary login: show messages and the OIDC
+                        // button only, never the local form (/login?nosso has it).
+                        $ssoOnly = $ssoOnly ?? false;
+                        $oidcButtonLabel = $snipeSettings->oidc_button_label ?: trans('auth/general.oidc_login');
+                    @endphp
+
+                    @if ($snipeSettings->isOidcLoginEnabled() && ! $ssoOnly)
+
+                        <br><br>
+                        <a href="{{ route('oidc.login') }}" class="btn btn-block btn-primary btn-lg">
+                            <x-icon type="oidc" />
+                            {{ $oidcButtonLabel }}
+                        </a>
+
+                        <div class="separator">{{ strtoupper(trans('general.or')) }}</div>
+                    @endif
+
+                    @if (! $ssoOnly && ($snipeSettings->google_login=='1') && ($snipeSettings->google_client_id!='') && ($snipeSettings->google_client_secret!=''))
 
                         <br><br>
                         <a href="{{ route('google.redirect')  }}" class="btn btn-block btn-social btn-google btn-lg">
@@ -49,7 +67,7 @@
                                 <!-- Notifications -->
                                 <x-notifications />
 
-                                @if (!config('app.require_saml'))
+                                @if (!config('app.require_saml') && ! $ssoOnly)
                                 <div class="col-md-12">
                                     <!-- CSRF Token -->
 
@@ -93,7 +111,7 @@
                                 @endif
                             </div> <!-- end row -->
 
-                            @if (!config('app.require_saml') && $snipeSettings->saml_enabled)
+                            @if (!config('app.require_saml') && ! $ssoOnly && $snipeSettings->saml_enabled)
                             <div class="row">
                                 <div class="text-right col-md-12">
                                     <a href="{{ route('saml.login')  }}">{{ trans('auth/general.saml_login')  }}</a>
@@ -102,7 +120,9 @@
                             @endif
                         </div>
                         <div class="box-footer">
-                            @if (config('app.require_saml'))
+                            @if ($ssoOnly)
+                                <a class="btn btn-primary btn-block" href="{{ route('oidc.login') }}"><x-icon type="oidc" /> {{ $oidcButtonLabel }}</a>
+                            @elseif (config('app.require_saml'))
                                 <a class="btn btn-primary btn-block" href="{{ route('saml.login')  }}">{{ trans('auth/general.saml_login')  }}</a>
                             @else
                                 <button class="btn btn-primary btn-block" type="submit" id="submit">
@@ -110,7 +130,9 @@
                                 </button>
                             @endif
 
-                            @if ($snipeSettings->custom_forgot_pass_url)
+                            @if ($ssoOnly)
+                                {{-- Password recovery is the identity provider's job. --}}
+                            @elseif ($snipeSettings->custom_forgot_pass_url)
                                 <div class="col-md-12 text-right" style="padding-top: 15px;">
                                     <a href="{{ $snipeSettings->custom_forgot_pass_url  }}" rel="noopener">{{ trans('auth/general.forgot_password')  }}</a>
                                 </div>

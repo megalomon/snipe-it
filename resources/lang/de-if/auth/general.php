@@ -16,4 +16,8 @@ return [
     'google_login_failed' => 'Anmeldung fehlgeschlagen, bitte melde dich erneut an!',
     'invite_password_expires' => 'Dieser Link zum Zurücksetzen des Passworts läuft am :expire_date ab. Du kannst den manuellen Link zum Zurücksetzen des Passworts verwenden, um ein neues Zurücksetzungs-Token zu erhalten, indem Du hier klickst',
 
+    'oidc_login' => 'Anmelden mit OpenID Connect',
+    'oidc_login_failed' => 'Die Anmeldung über OpenID Connect ist fehlgeschlagen, bitte versuche es erneut.',
+    'oidc_no_account' => 'Deine Anmeldung war erfolgreich, aber für dich gibt es kein aktives Snipe-IT-Konto. Bitte wende dich an deine Administration.',
+
 ];
