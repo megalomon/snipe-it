@@ -693,5 +693,17 @@ return [
     'oidc_backchannel_logout_url' => 'Back-Channel-Logout-URL',
     'oidc_backchannel_logout_url_help' => 'Trage diese Adresse beim Client in deinem Identity Provider als Back-Channel-Logout-URL ein (in Keycloak zusätzlich „Backchannel logout session required“ aktivieren). Meldet sich ein Benutzer beim Anbieter ab oder beendet die Administration dort seine Sitzungen, endet auch seine Snipe-IT-Sitzung.',
     'oidc_discovery_failed' => 'Das OpenID-Connect-Discovery-Dokument konnte von diesem Issuer nicht geladen werden. Prüfe die URL und ob Snipe-IT den Anbieter erreichen kann.',
-
+    'privacy' => 'Datenschutz',
+    'privacy_title' => 'Datenschutz-Einstellungen',
+    'privacy_help' => 'IP-Adressen, Aufbewahrungsfristen und Anonymisierung personenbezogener Daten (DSGVO)',
+    'privacy_ip_addresses' => 'IP-Adressen',
+    'privacy_truncate_ip_addresses' => 'IP-Adressen gekürzt speichern',
+    'privacy_truncate_ip_addresses_help' => 'Aktivitätsprotokoll und Anmeldeversuche speichern nur noch den Netzanteil von IP-Adressen (IPv4: letztes Oktett genullt, IPv6: nur die ersten 48 Bit). Gilt für neue Einträge.',
+    'privacy_ip_retention_days' => 'IP-Adressen im Aktivitätsprotokoll aufbewahren (Tage)',
+    'privacy_ip_retention_days_help' => 'Aus Einträgen des Aktivitätsprotokolls, die älter sind, werden IP-Adresse und Browserkennung (User-Agent) entfernt. Leer lassen, um sie unbegrenzt aufzubewahren.',
+    'privacy_login_attempts_retention_days' => 'Anmeldeversuche aufbewahren (Tage)',
+    'privacy_login_attempts_retention_days_help' => 'Ältere Anmeldeversuche (Benutzername, IP-Adresse, User-Agent) werden gelöscht. Leer lassen, um sie unbegrenzt aufzubewahren.',
+    'privacy_anonymize_deleted_users_days' => 'Gelöschte Benutzer anonymisieren nach (Tagen)',
+    'privacy_anonymize_deleted_users_days_help' => 'Benutzer, die länger gelöscht sind, werden automatisch anonymisiert. Ihr Asset-Verlauf bleibt erhalten, lässt aber keinen Rückschluss mehr auf die Person zu. Leer lassen, um nie automatisch zu anonymisieren.',
+    'privacy_schedule_help' => 'Die Fristen werden einmal täglich durch die geplante Aufgabe snipeit:privacy-cleanup angewendet, die sich auch manuell ausführen lässt.',
 ];

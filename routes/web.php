@@ -484,6 +484,14 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'authorize:superuser
     Route::post('oidc', [SettingsController::class, 'postOidcSettings'])
         ->name('settings.oidc.save');
 
+    Route::get('privacy', [SettingsController::class, 'getPrivacySettings'])
+        ->name('settings.privacy.index')
+        ->breadcrumbs(fn (Trail $trail) => $trail->parent('settings.index')
+            ->push(trans('admin/settings/general.privacy_title'), route('settings.privacy.index')));
+
+    Route::post('privacy', [SettingsController::class, 'postPrivacySettings'])
+        ->name('settings.privacy.save');
+
     Route::get('purge', [SettingsController::class, 'getPurge'])
         ->name('settings.purge.index')
         ->breadcrumbs(fn (Trail $trail) => $trail->parent('settings.index')

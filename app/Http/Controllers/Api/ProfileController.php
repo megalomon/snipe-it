@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Users\ExportPersonalDataAction;
 use App\Helpers\Helper;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\CheckForTwoFactor;
@@ -327,5 +328,19 @@ class ProfileController extends Controller
 
         return response()->json($transformer->transformFiles($eulas, $eulas->count()));
 
+    }
+
+    /**
+     * The authenticated user's own personal data as one JSON document
+     * (right of access, Art. 15 GDPR).
+     */
+    public function personalData(): JsonResponse
+    {
+        return response()->json(
+            ExportPersonalDataAction::run(auth()->user(), auth()->user()),
+            200,
+            ['Content-Type' => 'application/json;charset=utf8'],
+            JSON_UNESCAPED_UNICODE
+        );
     }
 }

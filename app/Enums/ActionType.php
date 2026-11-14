@@ -33,6 +33,8 @@ enum ActionType: string
     case TokenUnrevoked = 'token unrevoked';
     case Impersonated = 'impersonated';
     case StoppedImpersonating = 'stopped impersonating';
+    case Anonymized = 'anonymized';
+    case PersonalDataExported = 'personal data exported';
 
     // Licenses
     case DeleteSeats = 'delete seats';

@@ -726,7 +726,7 @@ class Actionlog extends SnipeModel
             $actiontype = ActionType::from($actiontype);
         }
         $this->action_type = $actiontype->value;
-        $this->remote_ip = request()->ip();
+        $this->remote_ip = Setting::storableIpAddress(request()->ip());
         $this->user_agent = request()->header('User-Agent');
         $this->action_source = $this->determineActionSource();
 

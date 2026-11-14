@@ -15,6 +15,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\IpUtils;
 use Watson\Validating\ValidatingTrait;
 
 /**
@@ -88,6 +89,10 @@ class Setting extends Model
         'oidc_forcelogin' => 'boolean',
         'oidc_slo' => 'boolean',
         'oidc_provision_users' => 'boolean',
+        'privacy_truncate_ip_addresses' => 'boolean',
+        'privacy_ip_retention_days' => 'integer',
+        'privacy_login_attempts_retention_days' => 'integer',
+        'privacy_anonymize_deleted_users_days' => 'integer',
     ];
 
     /**
@@ -440,6 +445,27 @@ class Setting extends Model
     public function isOidcForceLoginEnabled(): bool
     {
         return $this->isOidcLoginEnabled() && $this->oidc_forcelogin;
+    }
+
+    /**
+     * The client IP address in the form it may be stored in the activity
+     * and login logs: unchanged, or with the host part zeroed when IP
+     * truncation is enabled in the privacy settings (IPv4 keeps /24,
+     * IPv6 keeps /48). Anything that isn't a valid IP address is dropped.
+     */
+    public static function storableIpAddress(?string $ip): ?string
+    {
+        if ($ip === null || filter_var($ip, FILTER_VALIDATE_IP) === false) {
+            return null;
+        }
+
+        $settings = self::getSettings();
+
+        if ($settings && $settings->privacy_truncate_ip_addresses) {
+            return IpUtils::anonymize($ip, 1, 10);
+        }
+
+        return $ip;
     }
 
     /**

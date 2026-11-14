@@ -12,6 +12,7 @@ use App\Http\Requests\StoreLdapSettings;
 use App\Http\Requests\StoreLocalizationSettings;
 use App\Http\Requests\StoreNotificationSettings;
 use App\Http\Requests\StoreOidcSettings;
+use App\Http\Requests\StorePrivacySettings;
 use App\Http\Requests\StoreSecuritySettings;
 use App\Models\Actionlog;
 use App\Models\Asset;
@@ -955,6 +956,38 @@ class SettingsController extends Controller
 
         if ($setting->save()) {
             return redirect()->route('settings.oidc.index')
+                ->with('success', trans('admin/settings/message.update.success'));
+        }
+
+        return redirect()->back()->withInput()->withErrors($setting->getErrors());
+    }
+
+    /**
+     * Show the privacy (data protection) settings.
+     */
+    public function getPrivacySettings(): View
+    {
+        return view('settings.privacy', ['setting' => Setting::getSettings()]);
+    }
+
+    /**
+     * Save the privacy (data protection) settings.
+     */
+    public function postPrivacySettings(StorePrivacySettings $request): RedirectResponse
+    {
+        if (config('app.lock_passwords')) {
+            return redirect()->back()->with('error', trans('general.feature_disabled'));
+        }
+
+        $setting = Setting::getSettings();
+
+        $setting->privacy_truncate_ip_addresses = $request->boolean('privacy_truncate_ip_addresses');
+        $setting->privacy_ip_retention_days = $request->filled('privacy_ip_retention_days') ? $request->integer('privacy_ip_retention_days') : null;
+        $setting->privacy_login_attempts_retention_days = $request->filled('privacy_login_attempts_retention_days') ? $request->integer('privacy_login_attempts_retention_days') : null;
+        $setting->privacy_anonymize_deleted_users_days = $request->filled('privacy_anonymize_deleted_users_days') ? $request->integer('privacy_anonymize_deleted_users_days') : null;
+
+        if ($setting->save()) {
+            return redirect()->route('settings.privacy.index')
                 ->with('success', trans('admin/settings/message.update.success'));
         }
 

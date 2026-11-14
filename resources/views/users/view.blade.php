@@ -23,6 +23,14 @@
             </div>
         @endif
 
+        @if ($user->anonymized_at)
+            <div class="col-md-12">
+                <x-callout type="info" icon="anonymize">
+                    {{ trans('admin/users/message.anonymized_notice', ['date' => \App\Helpers\Helper::getFormattedDateObject($user->anonymized_at, 'datetime', false)]) }}
+                </x-callout>
+            </div>
+        @endif
+
         <x-page-column class="col-md-9 main-panel">
 
             <x-tabs>
@@ -316,6 +324,27 @@
                                     </p>
                                 @endif
 
+                                @if (auth()->user()->isSuperUser())
+                                    <!-- Data protection: export and anonymization -->
+                                    <a href="{{ route('users.personal-data', $user) }}" class="btn btn-theme hidden-print btn-social btn-block" style="margin-top: 10px;">
+                                        <x-icon type="download" class="fa-fw"/>
+                                        {{ trans('admin/users/general.personal_data_export') }}
+                                    </a>
+                                    <p class="help-block" style="line-height: 1.6;">
+                                        {{ trans('admin/users/general.personal_data_export_help') }}
+                                    </p>
+
+                                    @if (! $user->anonymized_at && $user->id !== auth()->id())
+                                        <button type="button" class="btn btn-danger hidden-print btn-social btn-block" data-toggle="modal" data-target="#confirmAnonymizeModal" style="margin-top: 10px;">
+                                            <x-icon type="anonymize" class="fa-fw"/>
+                                            {{ trans('admin/users/general.anonymize') }}
+                                        </button>
+                                        <p class="help-block" style="line-height: 1.6;">
+                                            {{ trans('admin/users/general.anonymize_help') }}
+                                        </p>
+                                    @endif
+                                @endif
+
 
 
                         </x-page-column>
@@ -574,6 +603,25 @@
             :title="trans('admin/settings/general.two_factor_reset')"
         >
             {{ trans('admin/settings/general.two_factor_reset_confirm', ['name' => $user->display_name]) }}
+        </x-modals.confirm-action>
+    @endif
+
+    @if (auth()->user()->isSuperUser() && ! $user->anonymized_at && $user->id !== auth()->id())
+        <x-modals.confirm-action
+            modal-name="confirmAnonymizeModal"
+            :route="route('users.anonymize', $user)"
+            :title="trans('admin/users/general.anonymize')"
+            button-class="btn-danger"
+            :button-label="trans('admin/users/general.anonymize')"
+        >
+            <p>{{ trans('admin/users/general.anonymize_confirm', ['name' => $user->display_name]) }}</p>
+            @unless ($user->hasNoAssignmentBlockers())
+                <p class="text-danger">{{ trans('admin/users/message.anonymize.has_assignments') }}</p>
+            @endunless
+            <label class="form-control">
+                <input type="checkbox" name="confirm_anonymize" value="1" required aria-required="true">
+                {{ trans('admin/users/general.anonymize_confirm_checkbox') }}
+            </label>
         </x-modals.confirm-action>
     @endif
 

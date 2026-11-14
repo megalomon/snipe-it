@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Actions\Permissions\NormalizePermissionsPayloadAction;
 use App\Actions\Permissions\PreserveUnauthorizedPrivilegedPermissionsAction;
+use App\Actions\Users\AnonymizeUserAction;
+use App\Actions\Users\ExportPersonalDataAction;
+use App\Exceptions\UserStillHasAssignments;
 use App\Helpers\Helper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DeleteUserRequest;
@@ -1160,5 +1163,50 @@ class UsersController extends Controller
         $history = (clone $historyQuery)->skip($offset)->take($limit)->get();
 
         return response()->json((new ActionlogsTransformer)->transformActionlogs($history, $total), 200, ['Content-Type' => 'application/json;charset=utf8'], JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * Everything stored about a user as one JSON document (Art. 15 / 20
+     * GDPR). Superusers only, since it includes IP addresses and the
+     * complete login history; users get their own via the account API.
+     */
+    public function personalData(User $user): JsonResponse
+    {
+        abort_unless(auth()->user()?->isSuperUser(), 403);
+
+        return response()->json(
+            ExportPersonalDataAction::run($user, auth()->user()),
+            200,
+            ['Content-Type' => 'application/json;charset=utf8'],
+            JSON_UNESCAPED_UNICODE
+        );
+    }
+
+    /**
+     * Irreversibly anonymizes a user's personal data (Art. 17 GDPR).
+     */
+    public function anonymize(User $user): JsonResponse
+    {
+        abort_unless(auth()->user()?->isSuperUser(), 403);
+
+        if (config('app.lock_passwords')) {
+            return response()->json(Helper::formatStandardApiResponse('error', null, trans('general.feature_disabled')));
+        }
+
+        if ($user->id === auth()->id()) {
+            return response()->json(Helper::formatStandardApiResponse('error', null, trans('admin/users/message.anonymize.not_self')));
+        }
+
+        if ($user->anonymized_at) {
+            return response()->json(Helper::formatStandardApiResponse('error', null, trans('admin/users/message.anonymize.already')));
+        }
+
+        try {
+            AnonymizeUserAction::run($user, auth()->user());
+        } catch (UserStillHasAssignments) {
+            return response()->json(Helper::formatStandardApiResponse('error', null, trans('admin/users/message.anonymize.has_assignments')));
+        }
+
+        return response()->json(Helper::formatStandardApiResponse('success', null, trans('admin/users/message.anonymize.success')));
     }
 }

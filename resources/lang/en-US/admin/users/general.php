@@ -95,4 +95,12 @@ return [
         'success' => 'Transferred :assets asset(s), :accessories accessory checkout(s), and :licenses license seat(s) to :target.',
         'some_skipped' => ':count item(s) were skipped, likely because they no longer belong to the source user, violate company scoping, or are non-reassignable.',
     ],
+    'anonymized_first_name' => 'Anonymized user',
+    'anonymized_placeholder' => '[anonymized]',
+    'personal_data_export' => 'Export personal data',
+    'personal_data_export_help' => 'Downloads everything stored about this user as a JSON file (GDPR right of access). The export is recorded in the user\'s history.',
+    'anonymize' => 'Anonymize user',
+    'anonymize_help' => 'Irreversibly erases this user\'s personal data and deletes the account. The asset history is kept without identifying the person.',
+    'anonymize_confirm' => 'This irreversibly replaces the name, username, email address and all other personal data of :name, removes their identifiers, IP addresses and browser identifiers from the activity log, deletes their login attempts, API tokens, avatar and uploaded files, and deletes the account. Signed acceptances are kept as proof of handover.',
+    'anonymize_confirm_checkbox' => 'I understand that this cannot be undone.',
 ];

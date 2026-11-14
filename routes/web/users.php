@@ -117,6 +117,22 @@ Route::group(['prefix' => 'users', 'middleware' => ['auth']], function () {
         ]
     )->name('users.two_factor_reset');
 
+    Route::get(
+        '{user}/personal-data',
+        [
+            Users\UserPrivacyController::class,
+            'export',
+        ]
+    )->name('users.personal-data')->withTrashed();
+
+    Route::post(
+        '{user}/anonymize',
+        [
+            Users\UserPrivacyController::class,
+            'anonymize',
+        ]
+    )->name('users.anonymize')->withTrashed();
+
     Route::post(
         'bulkedit',
         [
