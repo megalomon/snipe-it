@@ -615,9 +615,9 @@
             :button-label="trans('admin/users/general.anonymize')"
         >
             <p>{{ trans('admin/users/general.anonymize_confirm', ['name' => $user->display_name]) }}</p>
-            @unless ($user->hasNoAssignmentBlockers())
-                <p class="text-danger">{{ trans('admin/users/message.anonymize.has_assignments') }}</p>
-            @endunless
+            @if ($user->allAssignedCount() > 0)
+                <p>{{ trans('admin/users/general.anonymize_keeps_assignments', ['count' => $user->allAssignedCount()]) }}</p>
+            @endif
             <label class="form-control">
                 <input type="checkbox" name="confirm_anonymize" value="1" required aria-required="true">
                 {{ trans('admin/users/general.anonymize_confirm_checkbox') }}

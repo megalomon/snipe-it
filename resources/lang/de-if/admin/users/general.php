@@ -102,5 +102,6 @@ return [
     'anonymize' => 'Benutzer anonymisieren',
     'anonymize_help' => 'Löscht die personenbezogenen Daten dieses Benutzers unwiderruflich und löscht das Konto. Der Asset-Verlauf bleibt ohne Personenbezug erhalten.',
     'anonymize_confirm' => 'Damit werden Name, Benutzername, E-Mail-Adresse und alle weiteren personenbezogenen Daten von :name unwiderruflich ersetzt, seine Kennungen, IP-Adressen und Browserkennungen aus dem Aktivitätsprotokoll entfernt, Anmeldeversuche, API-Token, Profilbild und hochgeladene Dateien gelöscht und das Konto gelöscht. Unterschriebene Annahmebestätigungen bleiben als Übergabenachweis erhalten.',
+    'anonymize_keeps_assignments' => 'Diesem Benutzer sind noch :count Gegenstand/Gegenstände ausgegeben. Sie bleiben dem anonymisierten Konto zugeordnet und können später wie gewohnt zurückgenommen werden.',
     'anonymize_confirm_checkbox' => 'Mir ist bewusst, dass sich das nicht rückgängig machen lässt.',
 ];

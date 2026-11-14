@@ -6,7 +6,6 @@ use App\Actions\Permissions\NormalizePermissionsPayloadAction;
 use App\Actions\Permissions\PreserveUnauthorizedPrivilegedPermissionsAction;
 use App\Actions\Users\AnonymizeUserAction;
 use App\Actions\Users\ExportPersonalDataAction;
-use App\Exceptions\UserStillHasAssignments;
 use App\Helpers\Helper;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\DeleteUserRequest;
@@ -1201,11 +1200,7 @@ class UsersController extends Controller
             return response()->json(Helper::formatStandardApiResponse('error', null, trans('admin/users/message.anonymize.already')));
         }
 
-        try {
-            AnonymizeUserAction::run($user, auth()->user());
-        } catch (UserStillHasAssignments) {
-            return response()->json(Helper::formatStandardApiResponse('error', null, trans('admin/users/message.anonymize.has_assignments')));
-        }
+        AnonymizeUserAction::run($user, auth()->user());
 
         return response()->json(Helper::formatStandardApiResponse('success', null, trans('admin/users/message.anonymize.success')));
     }

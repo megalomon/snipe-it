@@ -3,11 +3,9 @@
 namespace App\Actions\Privacy;
 
 use App\Actions\Users\AnonymizeUserAction;
-use App\Exceptions\UserStillHasAssignments;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class PurgeExpiredPersonalDataAction
 {
@@ -17,7 +15,7 @@ class PurgeExpiredPersonalDataAction
      * older login attempts and anonymizes users that have been deleted for
      * longer than the configured period. A period left empty keeps the data.
      *
-     * @return array{ip_addresses_removed: int, login_attempts_deleted: int, users_anonymized: int, users_skipped: int}
+     * @return array{ip_addresses_removed: int, login_attempts_deleted: int, users_anonymized: int}
      */
     public static function run(Setting $settings): array
     {
@@ -25,7 +23,6 @@ class PurgeExpiredPersonalDataAction
             'ip_addresses_removed' => 0,
             'login_attempts_deleted' => 0,
             'users_anonymized' => 0,
-            'users_skipped' => 0,
         ];
 
         if ($settings->privacy_ip_retention_days) {
@@ -47,13 +44,8 @@ class PurgeExpiredPersonalDataAction
                 ->where('deleted_at', '<', now()->subDays($settings->privacy_anonymize_deleted_users_days))
                 ->orderBy('id')
                 ->each(function (User $user) use (&$result) {
-                    try {
-                        AnonymizeUserAction::run($user);
-                        $result['users_anonymized']++;
-                    } catch (UserStillHasAssignments) {
-                        Log::warning('Privacy cleanup skipped deleted user '.$user->id.': items are still assigned to them.');
-                        $result['users_skipped']++;
-                    }
+                    AnonymizeUserAction::run($user);
+                    $result['users_anonymized']++;
                 });
         }
 

@@ -38,7 +38,7 @@ Errors use the usual Snipe-IT envelope:
 |---|---|---|
 | Not permitted (not a superuser) | `403` | `"403"` |
 | User ID does not exist | `200` | `"User not found"` |
-| Anonymization refused | `200` | Error message, see below |
+| Anonymization not possible | `200` | Error message, see below |
 
 Note: as everywhere in the Snipe-IT API, business errors are returned with HTTP status `200`. Always check the `status` field in scripts, not just the HTTP status.
 
@@ -160,7 +160,7 @@ POST /api/v1/users/{id}/anonymize
 **Irreversibly** removes a user's personal data. The asset history is kept, but points to an account that no longer identifies anyone.
 
 - **Permission:** superusers only. You cannot anonymize your own account.
-- **Precondition:** nothing is checked out to the person any more, and they no longer manage users or locations. These are the same conditions as for deleting a user.
+- **Checked-out items do not block it.** Assets, accessories, licenses and consumables still assigned to the person stay assigned to the anonymized account (see below).
 - **No request body needed.**
 - **Same function in the web UI:** the "Anonymize user" button on the user page, with confirmation.
 
@@ -185,7 +185,6 @@ Business errors (HTTP status `200`, `status` = `"error"`):
 
 | Cause | Message |
 |---|---|
-| Items still checked out, or still a manager | "This user still has items checked out or still manages users or locations. Check in or reassign them first." |
 | Already anonymized | "This user has already been anonymized." |
 | Own account | "You cannot anonymize your own account." |
 | Demo mode | "This feature has been disabled for the demo installation." |
@@ -220,6 +219,8 @@ Messages are returned in the language set for the account the API token belongs 
 **Kept**
 
 - Signed checkout acceptances and their EULA PDFs, as proof of the handover of company property.
+- Items still checked out to the person (assets, accessories, licenses, consumables). They stay assigned to the anonymized account, remain visible on the item and can be checked in later as usual.
+- Users and locations that have the person as their manager keep pointing at the anonymized account.
 
 The database changes run in a single transaction. Files are only deleted once the transaction has been committed. Afterwards the user's history shows an "Anonymized" entry naming the account that performed it.
 

@@ -76,7 +76,7 @@ class PurgeExpiredPersonalDataTest extends TestCase
         $this->assertSame('still.here', DB::table('users')->where('id', $active->id)->value('username'));
     }
 
-    public function test_deleted_users_still_holding_items_are_skipped()
+    public function test_deleted_users_still_holding_items_are_anonymized_too()
     {
         $this->settings->set(['privacy_anonymize_deleted_users_days' => 90]);
         $user = User::factory()->create(['username' => 'holds.laptop']);
@@ -85,7 +85,7 @@ class PurgeExpiredPersonalDataTest extends TestCase
 
         $this->artisan('snipeit:privacy-cleanup')->assertSuccessful();
 
-        $this->assertSame('holds.laptop', DB::table('users')->where('id', $user->id)->value('username'));
+        $this->assertSame('anonymized-'.$user->id, DB::table('users')->where('id', $user->id)->value('username'));
     }
 
     public function test_cleanup_is_scheduled_daily()

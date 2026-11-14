@@ -4,7 +4,6 @@ namespace App\Actions\Users;
 
 use App\Enums\ActionType;
 use App\Enums\FileStorage;
-use App\Exceptions\UserStillHasAssignments;
 use App\Models\Actionlog;
 use App\Models\CalendarEvent;
 use App\Models\Setting;
@@ -29,16 +28,13 @@ class AnonymizeUserAction
      * entries, the avatar and uploaded files.
      *
      * Signed acceptances and their EULA PDFs are deliberately kept: they
-     * document the handover of company property.
-     *
-     * @throws UserStillHasAssignments
+     * document the handover of company property. Items still checked out
+     * to the user stay assigned to the anonymized account, and users or
+     * locations the person manages keep pointing at it, so nothing about
+     * the inventory is lost and items can still be checked in afterwards.
      */
     public static function run(User $user, ?User $performedBy = null): void
     {
-        if (! $user->hasNoAssignmentBlockers()) {
-            throw new UserStillHasAssignments($user);
-        }
-
         // Stored values use the installation's language, not that of
         // whoever happens to trigger the anonymization.
         $locale = Setting::getSettings()?->locale;

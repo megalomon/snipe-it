@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Users;
 
 use App\Actions\Users\AnonymizeUserAction;
 use App\Actions\Users\ExportPersonalDataAction;
-use App\Exceptions\UserStillHasAssignments;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -48,11 +47,7 @@ class UserPrivacyController extends Controller
             return redirect()->route('users.show', $user)->with('error', trans('admin/users/message.anonymize.already'));
         }
 
-        try {
-            AnonymizeUserAction::run($user, auth()->user());
-        } catch (UserStillHasAssignments) {
-            return redirect()->route('users.show', $user)->with('error', trans('admin/users/message.anonymize.has_assignments'));
-        }
+        AnonymizeUserAction::run($user, auth()->user());
 
         return redirect()->route('users.show', $user)->with('success', trans('admin/users/message.anonymize.success'));
     }

@@ -4,9 +4,9 @@ namespace Tests\Feature\Privacy;
 
 use App\Actions\Users\AnonymizeUserAction;
 use App\Enums\ActionType;
-use App\Exceptions\UserStillHasAssignments;
 use App\Models\Asset;
 use App\Models\CheckoutAcceptance;
+use App\Models\Consumable;
 use App\Models\Group;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -232,20 +232,31 @@ class AnonymizeUserTest extends TestCase
         $this->assertSame('eula.pdf', $row->filename);
     }
 
-    public function test_user_with_checked_out_items_cannot_be_anonymized()
+    public function test_checked_out_items_stay_assigned_to_the_anonymized_account()
     {
         $user = $this->personWithData();
-        Asset::factory()->assignedToUser($user)->create();
+        $asset = Asset::factory()->assignedToUser($user)->create();
+        $consumable = Consumable::factory()->checkedOutToUser($user)->create();
 
-        try {
-            AnonymizeUserAction::run($user);
-            $this->fail('Expected UserStillHasAssignments');
-        } catch (UserStillHasAssignments) {
-            // expected
-        }
+        AnonymizeUserAction::run($user);
 
-        $this->assertSame('jane.doe', $user->fresh()->username);
-        $this->assertNull($user->fresh()->anonymized_at);
+        $this->assertNotNull($user->fresh()->anonymized_at);
+        $this->assertSame($user->id, (int) $asset->fresh()->assigned_to);
+        $this->assertSame(User::class, $asset->fresh()->assigned_type);
+        $this->assertSame(1, DB::table('consumables_users')->where('consumable_id', $consumable->id)->where('assigned_to', $user->id)->count());
+        // Still resolvable (and checkable-in) although the account is deleted.
+        $this->assertSame('anonymized-'.$user->id, $asset->fresh()->assignedTo->username);
+    }
+
+    public function test_managed_users_keep_pointing_at_the_anonymized_account()
+    {
+        $user = $this->personWithData();
+        $report = User::factory()->create(['manager_id' => $user->id]);
+
+        AnonymizeUserAction::run($user);
+
+        $this->assertSame($user->id, $report->fresh()->manager_id);
+        $this->assertNotNull($user->fresh()->anonymized_at);
     }
 
     public function test_superuser_can_anonymize_from_the_user_page()
@@ -322,17 +333,17 @@ class AnonymizeUserTest extends TestCase
         $this->assertNotNull($user->fresh()->anonymized_at);
     }
 
-    public function test_api_refuses_user_with_checked_out_items()
+    public function test_api_anonymizes_user_with_checked_out_items()
     {
         $user = $this->personWithData();
-        Asset::factory()->assignedToUser($user)->create();
+        $asset = Asset::factory()->assignedToUser($user)->create();
 
         $this->actingAsForApi(User::factory()->superuser()->create())
             ->postJson(route('api.users.anonymize', $user))
             ->assertOk()
-            ->assertStatusMessageIs('error')
-            ->assertMessagesAre(trans('admin/users/message.anonymize.has_assignments'));
+            ->assertStatusMessageIs('success');
 
-        $this->assertNull($user->fresh()->anonymized_at);
+        $this->assertNotNull($user->fresh()->anonymized_at);
+        $this->assertSame($user->id, (int) $asset->fresh()->assigned_to);
     }
 }
