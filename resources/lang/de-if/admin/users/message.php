@@ -94,6 +94,5 @@ return [
         'success' => 'Der Benutzer wurde anonymisiert.',
         'already' => 'Dieser Benutzer ist bereits anonymisiert.',
         'not_self' => 'Du kannst dein eigenes Konto nicht anonymisieren.',
-        'has_assignments' => 'Diesem Benutzer sind noch Gegenstände ausgegeben oder er ist noch Vorgesetzter von Benutzern bzw. Standorten. Nimm sie zuerst zurück oder weise sie neu zu.',
     ],
 ];

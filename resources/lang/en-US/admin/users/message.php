@@ -94,6 +94,5 @@ return [
         'success' => 'The user has been anonymized.',
         'already' => 'This user has already been anonymized.',
         'not_self' => 'You cannot anonymize your own account.',
-        'has_assignments' => 'This user still has items checked out or still manages users or locations. Check in or reassign them first.',
     ],
 ];

@@ -102,5 +102,6 @@ return [
     'anonymize' => 'Anonymize user',
     'anonymize_help' => 'Irreversibly erases this user\'s personal data and deletes the account. The asset history is kept without identifying the person.',
     'anonymize_confirm' => 'This irreversibly replaces the name, username, email address and all other personal data of :name, removes their identifiers, IP addresses and browser identifiers from the activity log, deletes their login attempts, API tokens, avatar and uploaded files, and deletes the account. Signed acceptances are kept as proof of handover.',
+    'anonymize_keeps_assignments' => ':count item(s) are still checked out to this user. They stay assigned to the anonymized account and can be checked in later as usual.',
     'anonymize_confirm_checkbox' => 'I understand that this cannot be undone.',
 ];

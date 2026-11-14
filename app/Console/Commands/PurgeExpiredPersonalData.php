@@ -34,7 +34,6 @@ class PurgeExpiredPersonalData extends Command
             ['Log entries with IP address / user agent removed', $result['ip_addresses_removed']],
             ['Login attempts deleted', $result['login_attempts_deleted']],
             ['Deleted users anonymized', $result['users_anonymized']],
-            ['Deleted users skipped (items still assigned)', $result['users_skipped']],
         ]);
 
         return self::SUCCESS;
