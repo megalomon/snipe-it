@@ -440,7 +440,7 @@ class OidcLoginClient
 
     private function unverifiedKeyId(string $jwt): ?string
     {
-        $header = json_decode(JWT::urlsafeB64Decode(explode('.', $jwt)[0] ?? ''), true);
+        $header = json_decode(JWT::urlsafeB64Decode(explode('.', $jwt)[0]), true);
 
         return is_array($header) && is_string($header['kid'] ?? null) ? $header['kid'] : null;
     }
