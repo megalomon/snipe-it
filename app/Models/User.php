@@ -24,6 +24,7 @@ use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -35,13 +36,14 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use Laravel\Passport\Contracts\OAuthenticatable;
 use Laravel\Passport\HasApiTokens;
 use Watson\Validating\ValidatingTrait;
 
 /**
  * @mixin IdeHelperUser
  */
-class User extends SnipeModel implements AuthenticatableContract, AuthorizableContract, CanResetPasswordContract, HasLocalePreference, Importable
+class User extends SnipeModel implements AuthenticatableContract, AuthorizableContract, CanResetPasswordContract, HasLocalePreference, Importable, OAuthenticatable
 {
     use CompanyableTrait;
     use HasCalendarEvents;
@@ -94,12 +96,42 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
 
     protected $injectUniqueIdentifier = true;
 
-    /**
-     * Transient (non-persisted) ID of the Actionlog entry written by UserObserver::updating()
-     * during the current request. syncCompaniesWithLogging() merges company changes into this
-     * entry instead of creating a separate one, so a single edit session produces one log row.
-     */
-    public ?int $currentUpdateLogId = null;
+    protected $masked_fields = ['password'];
+
+    protected $allowed_fields = [
+        'email',
+        'activated',
+        'first_name',
+        'last_name',
+        'website',
+        'country',
+        'gravatar',
+        'location_id',
+        'phone',
+        'jobtitle',
+        'manager_id',
+        'employee_num',
+        'username',
+        'notes',
+        'ldap_import',
+        'locale',
+        'two_factor_enrolled',
+        'two_factor_optin',
+        'display_name',
+        'department_id',
+        'address',
+        'address2',
+        'city',
+        'state',
+        'zip',
+        'remote',
+        'start_date',
+        'end_date',
+        'autoassign_licenses',
+        'vip',
+        'password',
+        'permissions',
+    ];
 
     protected $fillable = [
         'activated',
@@ -159,8 +191,9 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
         'password' => 'required|min:8',
         'locale' => 'max:10|nullable',
         'website' => 'url|nullable|max:191',
-        'manager_id' => 'nullable|exists:users,id|cant_manage_self|non_circular:users,id',
-        'location_id' => 'exists:locations,id|nullable',
+        'manager_id' => 'nullable|exists:users,id|cant_manage_self|non_circular:users,id|fmcs_manager',
+        'location_id' => 'exists:locations,id|nullable|fmcs_location',
+        'department_id' => 'nullable|integer|exists:departments,id|fmcs_department',
         'start_date' => 'nullable|date_format:Y-m-d',
         'end_date' => 'nullable|date_format:Y-m-d|after_or_equal:start_date',
         'autoassign_licenses' => 'boolean',
@@ -212,6 +245,22 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
         'manager' => ['first_name', 'last_name', 'username', 'display_name'],
         'adminuser' => ['first_name', 'last_name', 'display_name'],
     ];
+
+    /**
+     * @return list<string>
+     */
+    protected function maskedLogFields(): array
+    {
+        return $this->masked_fields;
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    protected function allowedLogFields(): ?array
+    {
+        return $this->allowed_fields;
+    }
 
     /**
      * Advanced-search filterable fields.
@@ -1146,7 +1195,7 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
      * the legacy_company_id mirror, which is kept in sync with the pivot but is
      * not authoritative and may be dropped in a future release.
      */
-    public function company()
+    public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'legacy_company_id');
     }
@@ -1222,8 +1271,8 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
     /**
      * Sync company pivot membership and log the change if the set of companies changed.
      *
-     * When called after $user->save() in the same request, UserObserver::updating() will
-     * have already written an Actionlog row and stored its ID in $this->currentUpdateLogId.
+     * When called after $user->save() in the same request, Loggable::log_lifecycle_events() will
+     * have already written an Actionlog row and stored it in $this->currentActionLog.
      * In that case we merge the company change into that existing entry so that a single
      * edit session (field changes + company changes) produces one log row, not two.
      */
@@ -1251,11 +1300,11 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
 
         $companyChange = ['companies' => ['old' => $oldIds, 'new' => $newIds]];
 
-        if ($this->currentUpdateLogId && ($existing = Actionlog::find($this->currentUpdateLogId))) {
-            $meta = json_decode($existing->log_meta ?? '{}', true) ?: [];
-            $existing->log_meta = json_encode(array_merge($meta, $companyChange));
-            $existing->save();
-            $this->currentUpdateLogId = null;
+        if ($this->currentActionLog !== null && $this->currentActionLog->action_type === 'update') {
+            $meta = json_decode($this->currentActionLog->log_meta ?? '{}', true) ?: [];
+            $this->currentActionLog->log_meta = json_encode(array_merge($meta, $companyChange));
+            $this->currentActionLog->save();
+            $this->currentActionLog = null;
 
             return;
         }
@@ -1265,7 +1314,7 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
         $logAction->item_id = $this->id;
         $logAction->target_type = static::class;
         $logAction->target_id = $this->id;
-        $logAction->created_at = date('Y-m-d H:i:s');
+        $logAction->created_at = now();
         $logAction->created_by = auth()->id();
         $logAction->log_meta = json_encode($companyChange);
         $logAction->logaction('update');
@@ -1274,9 +1323,9 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
     /**
      * Sync group pivot membership and log the change if the set of groups changed.
      *
-     * Same as syncCompaniesWithLogging(): if UserObserver::updating()
+     * Same as syncCompaniesWithLogging(): if Loggable::log_lifecycle_events()
      * already wrote an Actionlog for this edit session (via
-     * $this->currentUpdateLogId), the group diff is merged into that
+     * $this->currentActionLog), the group diff is merged into that
      * existing row so a single edit produces one log entry, not two.
      * Otherwise a standalone Actionlog is written.
      */
@@ -1377,7 +1426,7 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
 
     /**
      * Write (or merge into) an Actionlog for a groups pivot change.
-     * Merges into $this->currentUpdateLogId when the observer already
+     * Merges into $this->currentActionLog when Loggable already
      * opened a log row for this edit session so field + group
      * changes stay in one log entry. Otherwise writes a standalone
      * 'update' Actionlog row.
@@ -1385,7 +1434,7 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
      * @param  array<int, array{id: int, name: string}>  $oldSnapshot
      * @param  array<int, array{id: int, name: string}>  $newSnapshot
      */
-    private function recordGroupsChange(array $oldSnapshot, array $newSnapshot): void
+    protected function recordGroupsChange(array $oldSnapshot, array $newSnapshot): void
     {
         if ($oldSnapshot === $newSnapshot) {
             return;
@@ -1393,11 +1442,11 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
 
         $groupChange = ['groups' => ['old' => $oldSnapshot, 'new' => $newSnapshot]];
 
-        if ($this->currentUpdateLogId && ($existing = Actionlog::find($this->currentUpdateLogId))) {
-            $meta = json_decode($existing->log_meta ?? '{}', true) ?: [];
-            $existing->log_meta = json_encode(array_merge($meta, $groupChange));
-            $existing->save();
-            $this->currentUpdateLogId = null;
+        if ($this->currentActionLog !== null && $this->currentActionLog->action_type === 'update') {
+            $meta = json_decode($this->currentActionLog->log_meta ?? '{}', true) ?: [];
+            $this->currentActionLog->log_meta = json_encode(array_merge($meta, $groupChange));
+            $this->currentActionLog->save();
+            $this->currentActionLog = null;
 
             return;
         }
@@ -1407,7 +1456,7 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
         $logAction->item_id = $this->id;
         $logAction->target_type = static::class;
         $logAction->target_id = $this->id;
-        $logAction->created_at = date('Y-m-d H:i:s');
+        $logAction->created_at = now();
         $logAction->created_by = auth()->id();
         $logAction->log_meta = json_encode($groupChange);
         $logAction->logaction('update');
@@ -1500,8 +1549,8 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
      *
      * Call this after any write to the company_user pivot so the mirror
      * stays consistent. Writes via the query builder so it doesn't trigger
-     * the User model's save events (which would recurse through
-     * UserObserver::updating and produce a spurious change log entry).
+     * the User model's save events and produce a spurious entry through
+     * Loggable::log_lifecycle_events().
      */
     public function syncLegacyCompanyIdMirror(): void
     {
@@ -1747,19 +1796,15 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
      * @author J. Vinsmoke
      *
      * @since  [v6.1]
-     *
-     * @return Relation
      */
-    public function allAssignedCount()
+    public function allAssignedCount(): int
     {
         $assetsCount = $this->assets()->count();
         $licensesCount = $this->licenses()->count();
         $accessoriesCount = $this->accessories()->count();
         $consumablesCount = $this->consumables()->count();
 
-        $totalCount = $assetsCount + $licensesCount + $accessoriesCount + $consumablesCount;
-
-        return (int) $totalCount;
+        return $assetsCount + $licensesCount + $accessoriesCount + $consumablesCount;
     }
 
     /**
@@ -1856,10 +1901,8 @@ class User extends SnipeModel implements AuthenticatableContract, AuthorizableCo
      * @author A. Gianotto <snipe@snipe.net>
      *
      * @since  [v1.0]
-     *
-     * @return Relation
      */
-    public function groups()
+    public function groups(): BelongsToMany
     {
         return $this->belongsToMany(Group::class, 'users_groups');
     }
