@@ -10,6 +10,7 @@ use App\Http\Middleware\CheckLocale;
 use App\Http\Middleware\CheckPermissions;
 use App\Http\Middleware\CheckUserIsActivated;
 use App\Http\Middleware\EncryptCookies;
+use App\Http\Middleware\EndOidcSessionsLoggedOutAtProvider;
 use App\Http\Middleware\EnforceApiTwoFactorEnrollment;
 use App\Http\Middleware\EnforceApiUserAgent;
 use App\Http\Middleware\IssueFreshApiTokenIfTwoFactorComplete;
@@ -80,6 +81,7 @@ class Kernel extends HttpKernel
             IssueFreshApiTokenIfTwoFactorComplete::class,
             CheckColorSettings::class,
             AuthenticateSession::class,
+            EndOidcSessionsLoggedOutAtProvider::class,
             SubstituteBindings::class,
         ],
 

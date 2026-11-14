@@ -44,10 +44,58 @@ class SCIMGroup extends Group
     public static function firstOrNew(array $attributes = [], array $values = [])
     {
         if (empty($attributes)) {
-            return new self;
+            return self::adoptableGroupForCreate() ?? new self;
         }
 
         return parent::firstOrNew($attributes, $values);
+    }
+
+    /**
+     * Request attribute marking a POST that took over an existing group.
+     */
+    public const ADOPTED_REQUEST_ATTRIBUTE = 'scim_adopted_group';
+
+    /**
+     * A POST for a group whose name already exists locally adopts that group
+     * when it isn't linked to any SCIM identity yet (no externalId), the
+     * same way user POSTs adopt an existing username. This lets an identity
+     * provider (e.g. Univention Nubus, which only looks groups up by
+     * externalId) take over groups that were created by hand before SCIM
+     * was set up, keeping their permissions. A same-named group already
+     * linked to another externalId is a real conflict and is left alone, so
+     * the request still fails the displayName uniqueness check.
+     */
+    private static function adoptableGroupForCreate(): ?self
+    {
+        $request = request();
+        $name = $request->input('displayName');
+
+        if (! $request->isMethod('POST') || ! is_string($name) || $name === '') {
+            return null;
+        }
+
+        $existing = self::where('name', $name)->first();
+
+        if ($existing === null || ! self::isAdoptableOnCreate($existing)) {
+            return null;
+        }
+
+        // Lets the displayName uniqueness rule recognise the row as ours.
+        $request->attributes->set('scim_in_flight_resource', $existing);
+        $request->attributes->set(self::ADOPTED_REQUEST_ATTRIBUTE, true);
+
+        return $existing;
+    }
+
+    /**
+     * Whether a SCIM POST for $group's name may take $group over: only on a
+     * create, and only while the group isn't linked to a SCIM identity.
+     * Also consulted by the displayName uniqueness rule, which runs on the
+     * raw payload before firstOrNew() is reached.
+     */
+    public static function isAdoptableOnCreate(Group $group): bool
+    {
+        return request()->isMethod('POST') && empty($group->scim_externalid);
     }
 
     // Have to re-define these here because Eloquent will try to 'guess' a

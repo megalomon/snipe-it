@@ -8,6 +8,7 @@ use App\Models\Ldap;
 use App\Models\SamlNonce;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\Oidc\OidcLoginClient;
 use App\Services\Saml;
 use Com\Tecnick\Barcode\Barcode;
 use Exception;
@@ -80,6 +81,12 @@ class LoginController extends Controller
             return Helper::safeIntended('/');
         }
 
+        $settings = Setting::getSettings();
+
+        // '?nosso' (or the older '?nosaml') is the escape hatch to the local
+        // login form when the identity provider is unavailable.
+        $localLoginRequested = $request->has('nosso') || $request->has('nosaml');
+
         if (! $request->session()->has('loggedout')) {
             // If the environment is set to ALWAYS require SAML, go straight to the SAML route.
             // We don't need to check other settings, as this should override those.
@@ -87,16 +94,27 @@ class LoginController extends Controller
                 return redirect()->route('saml.login');
             }
 
-            if ($this->saml->isEnabled() && Setting::getSettings()->saml_forcelogin == '1' && ! ($request->has('nosaml') || $request->session()->has('error'))) {
+            // A pending error (e.g. a failed OIDC login) must be shown rather
+            // than redirected away, or the browser would loop between
+            // Snipe-IT and a provider that still holds a valid session.
+            if ($settings->isOidcForceLoginEnabled() && ! $localLoginRequested && ! $request->session()->has('error')) {
+                return redirect()->route('oidc.login');
+            }
+
+            if ($this->saml->isEnabled() && $settings->saml_forcelogin == '1' && ! ($request->has('nosaml') || $request->session()->has('error'))) {
                 return redirect()->route('saml.login');
             }
         }
 
-        if (Setting::getSettings()->login_common_disabled == '1') {
+        // OIDC is the primary login: render only messages and the OIDC
+        // button, never the username/password form.
+        $ssoOnly = $settings->isOidcForceLoginEnabled() && ! $localLoginRequested;
+
+        if (! $ssoOnly && $settings->login_common_disabled == '1') {
             return view('errors.403');
         }
 
-        return view('auth.login');
+        return view('auth.login', ['ssoOnly' => $ssoOnly]);
     }
 
     /**
@@ -557,6 +575,16 @@ class LoginController extends Controller
             return redirect()->away($sloRequestUrl);
         }
 
+        // RP-initiated OIDC logout: end the provider session too, so the next
+        // visit lands on the provider's login page instead of being signed
+        // straight back in. Only for sessions that were started via OIDC.
+        $oidcIdToken = $request->session()->get(OidcController::SESSION_ID_TOKEN);
+        $request->session()->forget(OidcController::SESSION_KEYS);
+        $oidcLogoutUrl = null;
+        if ($oidcIdToken && $settings->isOidcLoginEnabled() && $settings->oidc_slo) {
+            $oidcLogoutUrl = (new OidcLoginClient($settings))->endSessionUrl($oidcIdToken);
+        }
+
         $request->session()->regenerate(true);
         $request->session()->forget('2fa_authed');
 
@@ -568,6 +596,10 @@ class LoginController extends Controller
 
         if (! empty($sloRedirectUrl)) {
             return redirect()->away($sloRedirectUrl);
+        }
+
+        if (! empty($oidcLogoutUrl)) {
+            return redirect()->away($oidcLogoutUrl);
         }
 
         $customLogoutUrl = $settings->login_remote_user_custom_logout_url;

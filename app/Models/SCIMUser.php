@@ -46,4 +46,34 @@ class SCIMUser extends User
     {
         return [];
     }
+
+    /**
+     * A SCIM DELETE (e.g. offboarding in the identity provider) of a user who
+     * still has assets, accessories, licenses or consumables checked out, or
+     * who manages users or locations, would leave those items hanging off a
+     * deleted account; the web UI refuses that delete for the same reason.
+     * Deactivate the user instead, so the items stay visible and can be
+     * checked in. The answer is still a success, since the identity is gone
+     * from Snipe-IT's point of view (it can no longer log in).
+     *
+     * @return bool|null
+     */
+    public function delete()
+    {
+        // Checked on the canonical User: polymorphic relations such as
+        // assets() would otherwise look for assigned_type = SCIMUser and
+        // never find anything. User::query() rather than User::find(): from
+        // inside a SCIMUser instance PHP forwards the latter to $this and
+        // hands back a SCIMUser again.
+        $user = User::query()->find($this->getKey());
+
+        if ($user !== null && ! $user->hasNoAssignmentBlockers()) {
+            $this->activated = 0;
+            $this->save();
+
+            return true;
+        }
+
+        return parent::delete();
+    }
 }

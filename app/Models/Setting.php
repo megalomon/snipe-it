@@ -84,6 +84,10 @@ class Setting extends Model
         // PHP 8 `0 == ''` is false, so checks expecting "disabled" misfired.
         // Normalize on read so every consumer sees a consistent string mode.
         'two_factor_enabled' => 'string',
+        'oidc_enabled' => 'boolean',
+        'oidc_forcelogin' => 'boolean',
+        'oidc_slo' => 'boolean',
+        'oidc_provision_users' => 'boolean',
     ];
 
     /**
@@ -416,6 +420,26 @@ class Setting extends Model
     public function isQrEnabled(): bool
     {
         return $this->qr_code == '1' || $this->label2_2d_type !== 'none';
+    }
+
+    /**
+     * Whether OpenID Connect browser login is switched on and has the
+     * minimum configuration (issuer + client id) needed to start a login.
+     */
+    public function isOidcLoginEnabled(): bool
+    {
+        return $this->oidc_enabled
+            && ! empty($this->oidc_issuer)
+            && ! empty($this->oidc_client_id);
+    }
+
+    /**
+     * Whether OIDC is the primary login, so the local login form is only
+     * reachable through the /login?nosso escape hatch.
+     */
+    public function isOidcForceLoginEnabled(): bool
+    {
+        return $this->isOidcLoginEnabled() && $this->oidc_forcelogin;
     }
 
     /**
