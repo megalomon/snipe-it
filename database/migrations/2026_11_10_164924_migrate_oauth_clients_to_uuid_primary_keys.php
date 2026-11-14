@@ -21,7 +21,8 @@ use Illuminate\Support\Str;
  * aware and falls back to those shapes when redirect_uris and
  * grant_types do not exist.
  *
- * Driver gating: MariaDB/MySQL uses the in-place CHANGE/MODIFY flow
+ * Driver gating: MariaDB/MySQL (driver name "mysql" or "mariadb") uses
+ * the in-place CHANGE/MODIFY flow
  * below to preserve data on live installs. SQLite can't ALTER COLUMN
  * TYPE in-place, and its `INTEGER PRIMARY KEY` is a strict rowid
  * alias that rejects UUID strings, so the SQLite path does a
@@ -57,7 +58,9 @@ return new class extends Migration
             return;
         }
 
-        if ($driver !== 'mysql') {
+        // Laravel reports "mariadb" for installs using the mariadb
+        // connection, which needs the same in-place flow as MySQL.
+        if (! in_array($driver, ['mysql', 'mariadb'], true)) {
             return;
         }
 
@@ -227,7 +230,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (DB::getDriverName() !== 'mysql') {
+        if (! in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
             return;
         }
 
