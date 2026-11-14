@@ -352,6 +352,34 @@ class SnipeMutableCollection extends MutableCollection
     public function replace($value, Model &$object, ?Path $path = null)
     {
         $this->add($value, $object);
+
+        // A full PUT (RFC 7644 §3.5.1) replaces the whole resource, so its
+        // member list is authoritative: members it no longer lists leave the
+        // group. Clients such as Univention Nubus rely on this to propagate
+        // removals. The same applies when a POST adopted an existing local
+        // group (see SCIMGroup::adoptableGroupForCreate). PATCH op=replace
+        // keeps the add-only behaviour above for Entra ID.
+        $authoritative = request()->isMethod('PUT')
+            || request()->attributes->get(SCIMGroup::ADOPTED_REQUEST_ATTRIBUTE) === true;
+
+        if (! $authoritative || ! $object instanceof Group) {
+            return;
+        }
+
+        $keepUserIds = $this->userIdsFromMemberPayload($value);
+        $detachUserIds = $object->users()
+            ->whereNotIn('users.id', $keepUserIds)
+            ->pluck('users.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if ($detachUserIds === []) {
+            return;
+        }
+
+        $object->{$this->attribute}()->detach($detachUserIds);
+
+        $this->logGroupMembershipChangesForIds($object, attachedIds: [], detachedIds: $detachUserIds);
     }
 
     // POST /scim/v2/Groups with an initial `members` array arrives here with
@@ -944,7 +972,11 @@ class SnipeSCIMConfig
                                             break;
 
                                         default:
-                                            throw new SCIMException("Unknown phone type '".@$phone['type']."'", 400);
+                                            // Snipe-IT only stores work and mobile numbers. Skip
+                                            // other types (home, pager, fax, ...) the way home
+                                            // addresses are skipped, rather than rejecting the
+                                            // whole user: Univention Nubus sends every number it has.
+                                            \Log::debug("SCIM: ignoring phone number of unsupported type '".@$phone['type']."'");
                                     }
                                 }
                             } catch (\Throwable $e) {
@@ -1080,12 +1112,29 @@ class SnipeSCIMConfig
                         }),
                         eloquent('display', 'name')
                     ),
-                    (new JSONCollection('roles'))->withSubAttributes( // TODO - what is this?
-                        eloquent('value')->ensure('required', 'min:3', 'alpha_dash:ascii'),
-                        eloquent('display')->ensure('nullable', 'min:3', 'alpha_dash:ascii'),
-                        eloquent('type')->ensure('nullable', 'min:3', 'alpha_dash:ascii'),
+                    // Snipe-IT has no storage for SCIM roles (there is no users.roles
+                    // column), so writing them used to fail with a 500. Accept and
+                    // discard them instead, so clients that always send roles (e.g.
+                    // Univention Nubus with guardian roles like "umc:udm:admin") can
+                    // still provision the user.
+                    (new class('roles') extends JSONCollection
+                    {
+                        public function add($value, Model &$object) {}
+
+                        public function replace($value, Model &$object, ?Path $path = null) {}
+
+                        public function remove($value, Model &$object, ?Path $path = null) {}
+
+                        public function doRead(&$object, $attributes = [])
+                        {
+                            return null;
+                        }
+                    })->withSubAttributes(
+                        eloquent('value')->ensure('required', 'string', 'max:255'),
+                        eloquent('display')->ensure('nullable', 'string', 'max:255'),
+                        eloquent('type')->ensure('nullable', 'string', 'max:255'),
                         eloquent('primary')->ensure('boolean')->default(false)
-                    )->ensure('nullable', 'array', 'max:20')
+                    )->ensure('nullable', 'array', 'max:100')
                 ),
                 (new AttributeSchema(self::ENTERPRISE, false))->withSubAttributes(
                     eloquent('employeeNumber', 'employee_num')->ensure('nullable'),
@@ -1205,6 +1254,11 @@ class SnipeSCIMConfig
                         // just-saved row as ours so validation doesn't false-positive.
                         $inFlight = request()->attributes->get('scim_in_flight_resource');
                         if ($inFlight && $group->id == $inFlight->id) {
+                            return;
+                        }
+                        // POST create of a local group not yet linked to a SCIM
+                        // identity: SCIMGroup::firstOrNew() adopts it.
+                        if (SCIMGroup::isAdoptableOnCreate($group)) {
                             return;
                         }
                         $fail('The name has already been taken.');
