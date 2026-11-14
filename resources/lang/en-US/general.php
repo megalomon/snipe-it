@@ -924,5 +924,6 @@ return [
 
     'token_unrevoked' => 'API token reinstated',
     'token_revoked' => 'API token revoked',
-
+    'anonymized' => 'Anonymized',
+    'personal_data_exported' => 'Personal data exported',
 ];

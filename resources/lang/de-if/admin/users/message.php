@@ -89,4 +89,11 @@ return [
         'error' => 'Für diesen Benutzer ist keine E-Mail-Adresse hinterlegt.',
         'success' => 'Der Benutzer wurde über sein aktuelles Inventar informiert.',
     ],
+    'anonymized_notice' => 'Dieser Benutzer wurde am :date anonymisiert. Seine personenbezogenen Daten sind gelöscht.',
+    'anonymize' => [
+        'success' => 'Der Benutzer wurde anonymisiert.',
+        'already' => 'Dieser Benutzer ist bereits anonymisiert.',
+        'not_self' => 'Du kannst dein eigenes Konto nicht anonymisieren.',
+        'has_assignments' => 'Diesem Benutzer sind noch Gegenstände ausgegeben oder er ist noch Vorgesetzter von Benutzern bzw. Standorten. Nimm sie zuerst zurück oder weise sie neu zu.',
+    ],
 ];

@@ -240,6 +240,10 @@ class IconHelper
                 return 'fas fa-sign-in-alt';
             case 'oidc':
                 return 'fa-brands fa-openid';
+            case 'privacy':
+                return 'fas fa-user-shield';
+            case 'anonymize':
+                return 'fas fa-user-secret';
             case 'backups':
                 return 'fas fa-file-archive';
             case 'logins':

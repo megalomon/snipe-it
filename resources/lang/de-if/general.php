@@ -899,5 +899,6 @@ return [
 
     'token_unrevoked' => 'API-Token wiederhergestellt',
     'token_revoked' => 'API-Token widerrufen',
-
+    'anonymized' => 'Anonymisiert',
+    'personal_data_exported' => 'Personenbezogene Daten exportiert',
 ];

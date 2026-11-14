@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +34,7 @@ class LogSuccessfulLogin
                 [
                     'username' => $event->user->username,
                     'user_agent' => request()->header('User-Agent'),
-                    'remote_ip' => request()->ip(),
+                    'remote_ip' => Setting::storableIpAddress(request()->ip()),
                     'successful' => 1,
                     'created_at' => $now,
                 ]

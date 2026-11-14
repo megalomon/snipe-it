@@ -95,4 +95,12 @@ return [
         'success' => ':assets Asset(s), :accessories Zubehör Checkout(s) und :licenses Lizenz(en) auf :target erfolgreich übertragen.',
         'some_skipped' => ':count Element(e) wurden übersprungen, wahrscheinlich weil sie nicht mehr zum Quellbenutzer gehören, die Unternehmensbereicherung verletzen oder nicht zuordnen können.',
     ],
+    'anonymized_first_name' => 'Anonymisierter Benutzer',
+    'anonymized_placeholder' => '[anonymisiert]',
+    'personal_data_export' => 'Personenbezogene Daten exportieren',
+    'personal_data_export_help' => 'Lädt alle über diesen Benutzer gespeicherten Daten als JSON-Datei herunter (Auskunftsrecht nach DSGVO). Der Export wird im Verlauf des Benutzers vermerkt.',
+    'anonymize' => 'Benutzer anonymisieren',
+    'anonymize_help' => 'Löscht die personenbezogenen Daten dieses Benutzers unwiderruflich und löscht das Konto. Der Asset-Verlauf bleibt ohne Personenbezug erhalten.',
+    'anonymize_confirm' => 'Damit werden Name, Benutzername, E-Mail-Adresse und alle weiteren personenbezogenen Daten von :name unwiderruflich ersetzt, seine Kennungen, IP-Adressen und Browserkennungen aus dem Aktivitätsprotokoll entfernt, Anmeldeversuche, API-Token, Profilbild und hochgeladene Dateien gelöscht und das Konto gelöscht. Unterschriebene Annahmebestätigungen bleiben als Übergabenachweis erhalten.',
+    'anonymize_confirm_checkbox' => 'Mir ist bewusst, dass sich das nicht rückgängig machen lässt.',
 ];

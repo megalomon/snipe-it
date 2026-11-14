@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +33,7 @@ class LogFailedLogin
                 [
                     'username' => $event->credentials['username'],
                     'user_agent' => request()->header('User-Agent'),
-                    'remote_ip' => request()->ip(),
+                    'remote_ip' => Setting::storableIpAddress(request()->ip()),
                     'successful' => 0,
                     'created_at' => $now,
                 ]

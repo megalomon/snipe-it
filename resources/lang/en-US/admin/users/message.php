@@ -89,4 +89,11 @@ return [
         'error' => 'This user has no email set.',
         'success' => 'The user has been notified about their current inventory.',
     ],
+    'anonymized_notice' => 'This user was anonymized on :date. Their personal data has been erased.',
+    'anonymize' => [
+        'success' => 'The user has been anonymized.',
+        'already' => 'This user has already been anonymized.',
+        'not_self' => 'You cannot anonymize your own account.',
+        'has_assignments' => 'This user still has items checked out or still manages users or locations. Check in or reassign them first.',
+    ],
 ];

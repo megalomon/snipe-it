@@ -693,5 +693,17 @@ return [
     'oidc_backchannel_logout_url' => 'Back-channel logout URL',
     'oidc_backchannel_logout_url_help' => 'Enter this as the back-channel logout URL of the client at your identity provider (in Keycloak also enable "Backchannel logout session required"). When a user logs out at the provider, or an administrator ends their sessions there, their Snipe-IT session ends too.',
     'oidc_discovery_failed' => 'The OpenID Connect discovery document could not be loaded from this issuer. Check the URL and that Snipe-IT can reach the provider.',
-
+    'privacy' => 'Privacy',
+    'privacy_title' => 'Privacy Settings',
+    'privacy_help' => 'IP addresses, retention periods and anonymization of personal data (GDPR)',
+    'privacy_ip_addresses' => 'IP Addresses',
+    'privacy_truncate_ip_addresses' => 'Store IP addresses truncated',
+    'privacy_truncate_ip_addresses_help' => 'The activity log and login attempts only store the network part of IP addresses (IPv4: last octet zeroed, IPv6: only the first 48 bits). Applies to new entries.',
+    'privacy_ip_retention_days' => 'Keep IP addresses in the activity log (days)',
+    'privacy_ip_retention_days_help' => 'IP addresses and browser identifiers (user agents) are removed from activity log entries older than this. Leave empty to keep them indefinitely.',
+    'privacy_login_attempts_retention_days' => 'Keep login attempts (days)',
+    'privacy_login_attempts_retention_days_help' => 'Login attempts (username, IP address, user agent) older than this are deleted. Leave empty to keep them indefinitely.',
+    'privacy_anonymize_deleted_users_days' => 'Anonymize deleted users after (days)',
+    'privacy_anonymize_deleted_users_days_help' => 'Users that have been deleted for longer than this are anonymized automatically. Their asset history is kept, but no longer identifies them. Leave empty to never anonymize automatically.',
+    'privacy_schedule_help' => 'The retention periods are applied once a day by the scheduled task snipeit:privacy-cleanup, which can also be run by hand.',
 ];

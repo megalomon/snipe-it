@@ -167,6 +167,13 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api', 'api-throttle:api']], fu
             ]
         )->name('api.personal-access-token.delete');
 
+        Route::get('personal-data',
+            [
+                Api\ProfileController::class,
+                'personalData',
+            ]
+        )->name('api.account.personal-data');
+
     }); // end account group
 
     /**
@@ -1410,6 +1417,20 @@ Route::group(['prefix' => 'v1', 'middleware' => ['api', 'api-throttle:api']], fu
                 'restore',
             ]
         )->name('api.users.restore');
+
+        Route::get('{user}/personal-data',
+            [
+                Api\UsersController::class,
+                'personalData',
+            ]
+        )->name('api.users.personal-data')->withTrashed();
+
+        Route::post('{user}/anonymize',
+            [
+                Api\UsersController::class,
+                'anonymize',
+            ]
+        )->name('api.users.anonymize')->withTrashed();
 
     });
 
