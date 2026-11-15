@@ -492,6 +492,14 @@ Route::group(['prefix' => 'admin', 'middleware' => ['auth', 'authorize:superuser
     Route::post('privacy', [SettingsController::class, 'postPrivacySettings'])
         ->name('settings.privacy.save');
 
+    Route::get('scim', [SettingsController::class, 'getScimSettings'])
+        ->name('settings.scim.index')
+        ->breadcrumbs(fn (Trail $trail) => $trail->parent('settings.index')
+            ->push(trans('admin/settings/general.scim_title'), route('settings.scim.index')));
+
+    Route::post('scim', [SettingsController::class, 'postScimSettings'])
+        ->name('settings.scim.save');
+
     Route::get('purge', [SettingsController::class, 'getPurge'])
         ->name('settings.purge.index')
         ->breadcrumbs(fn (Trail $trail) => $trail->parent('settings.index')

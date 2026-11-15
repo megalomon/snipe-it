@@ -242,6 +242,8 @@ class IconHelper
                 return 'fa-brands fa-openid';
             case 'privacy':
                 return 'fas fa-user-shield';
+            case 'scim':
+                return 'fas fa-people-arrows';
             case 'anonymize':
                 return 'fas fa-user-secret';
             case 'backups':

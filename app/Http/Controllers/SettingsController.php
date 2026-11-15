@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Scim\ReconcileScimUserActivationAction;
 use App\Enums\ActionType;
 use App\Helpers\Helper;
 use App\Helpers\StorageHelper;
@@ -13,6 +14,7 @@ use App\Http\Requests\StoreLocalizationSettings;
 use App\Http\Requests\StoreNotificationSettings;
 use App\Http\Requests\StoreOidcSettings;
 use App\Http\Requests\StorePrivacySettings;
+use App\Http\Requests\StoreScimSettings;
 use App\Http\Requests\StoreSecuritySettings;
 use App\Models\Actionlog;
 use App\Models\Asset;
@@ -992,6 +994,41 @@ class SettingsController extends Controller
         }
 
         return redirect()->back()->withInput()->withErrors($setting->getErrors());
+    }
+
+    /**
+     * Show the SCIM provisioning settings.
+     */
+    public function getScimSettings(): View
+    {
+        return view('settings.scim', [
+            'setting' => Setting::getSettings(),
+            'scimBaseUrl' => url('/scim/v2'),
+        ]);
+    }
+
+    /**
+     * Save the SCIM provisioning settings. Turning on "group membership
+     * required" applies it to the existing SCIM accounts right away.
+     */
+    public function postScimSettings(StoreScimSettings $request): RedirectResponse
+    {
+        if (config('app.lock_passwords')) {
+            return redirect()->back()->with('error', trans('general.feature_disabled'));
+        }
+
+        $setting = Setting::getSettings();
+        $setting->scim_existing_groups_only = $request->boolean('scim_existing_groups_only');
+        $setting->scim_require_group_membership = $request->boolean('scim_require_group_membership');
+
+        if (! $setting->save()) {
+            return redirect()->back()->withInput()->withErrors($setting->getErrors());
+        }
+
+        ReconcileScimUserActivationAction::run();
+
+        return redirect()->route('settings.scim.index')
+            ->with('success', trans('admin/settings/message.update.success'));
     }
 
     /**

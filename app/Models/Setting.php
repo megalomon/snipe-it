@@ -93,6 +93,8 @@ class Setting extends Model
         'privacy_ip_retention_days' => 'integer',
         'privacy_login_attempts_retention_days' => 'integer',
         'privacy_anonymize_deleted_users_days' => 'integer',
+        'scim_existing_groups_only' => 'boolean',
+        'scim_require_group_membership' => 'boolean',
     ];
 
     /**
