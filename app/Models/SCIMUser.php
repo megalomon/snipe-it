@@ -19,6 +19,25 @@ class SCIMUser extends User
         parent::__construct($attributes);
     }
 
+    /**
+     * Remembers what the SCIM client said about the account ("active") in
+     * scim_active. users.activated may additionally be switched off for
+     * lack of group membership, see ReconcileScimUserActivationAction, and
+     * must not overwrite the client's own decision when it is restored.
+     */
+    protected static function booted(): void
+    {
+        // Keeps User's own model event handlers (token revocation on
+        // delete etc.), which are registered per class.
+        parent::booted();
+
+        static::saving(function (SCIMUser $user) {
+            if ($user->isDirty('activated') || ! $user->exists) {
+                $user->scim_active = (bool) $user->activated;
+            }
+        });
+    }
+
     // Have to re-define this here because Eloquent will try to 'guess' a foreign key of s_c_i_m_user_id
     // from SCIMUser
     public function groups(): BelongsToMany

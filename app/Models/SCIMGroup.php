@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use ArieTimmerman\Laravel\SCIMServer\Exceptions\SCIMException;
+
 /**
  * @mixin IdeHelperSCIMGroup
  */
@@ -44,7 +46,19 @@ class SCIMGroup extends Group
     public static function firstOrNew(array $attributes = [], array $values = [])
     {
         if (empty($attributes)) {
-            return self::adoptableGroupForCreate() ?? new self;
+            $existing = self::adoptableGroupForCreate();
+
+            if ($existing !== null) {
+                return $existing;
+            }
+
+            // Groups carry permissions, so with this setting only groups an
+            // administrator created in Snipe-IT can be provisioned.
+            if (Setting::getSettings()?->scim_existing_groups_only) {
+                throw (new SCIMException(trans('admin/settings/general.scim_group_not_found', ['name' => (string) request()->input('displayName')])))->setCode(403);
+            }
+
+            return new self;
         }
 
         return parent::firstOrNew($attributes, $values);
