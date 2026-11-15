@@ -398,20 +398,26 @@ $(function () {
         var headericon = $context.attr('data-icon');
         var title = $context.attr('data-title');
 
-        // The delete form may only post to an http(s) URL; anything else
-        // (e.g. a javascript: URL smuggled into the attribute) is refused.
-        var action = safeFormAction(href);
-        if (action === null) {
-            return false;
+        // Triggers without href/data-href (e.g. the delete button on a
+        // detail page) rely on the action the page already rendered into
+        // the modal's form, so it is left untouched. A URL that is given
+        // may only be http(s); anything else (e.g. a javascript: URL
+        // smuggled into the attribute) is refused.
+        if (href) {
+            var action = safeFormAction(href);
+            if (action === null) {
+                return false;
+            }
+
+            // deleteForm is the ID of the modal form itself
+            $('#deleteForm').attr('action', action);
+            $dataConfirmModal.attr('action', action);
         }
 
-        // deleteForm is the ID of the modal form itself
-        $('#deleteForm').attr('action', action);
         $dataConfirmModal.find('.modal-header-icon').addClass(headericon);
         // Built as an element so the icon class can't inject markup.
         $dataConfirmModal.find('.modal-title').text(title).prepend(' ').prepend($('<i>').addClass('fa').addClass(headericon));
         $dataConfirmModal.find('.modal-body').text('').text(message);
-        $dataConfirmModal.attr('action', action);
 
         // Fire the modal
         $dataConfirmModal.modal({

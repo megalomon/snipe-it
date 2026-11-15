@@ -6,10 +6,18 @@ use App\Events\CheckoutableCheckedIn;
 use App\Models\Asset;
 use App\Models\Statuslabel;
 use App\Models\User;
+use Illuminate\Support\Facades\Crypt;
 
 class AssetImporter extends ItemImporter
 {
     protected $defaultStatusLabelId;
+
+    /**
+     * Columns of encrypted custom fields in the row being imported.
+     *
+     * @var list<string>
+     */
+    protected array $encryptedCustomFieldColumns = [];
 
     public function __construct($filename)
     {
@@ -159,9 +167,15 @@ class AssetImporter extends ItemImporter
         // Custom fields keep their existing logic. Only populated when the
         // matching CSV column is present in the row; unchanged from the
         // pre-refactor behavior.
+        $this->encryptedCustomFieldColumns = [];
+
         if ($this->customFields) {
             foreach ($this->customFields as $customField) {
                 $customFieldValue = $this->array_smart_custom_field_fetch($row, $customField);
+
+                if ($customField->field_encrypted == 1) {
+                    $this->encryptedCustomFieldColumns[] = $customField->db_column_name();
+                }
 
                 if (! is_null($customFieldValue)) {
                     if ($customField->field_encrypted == 1) {
@@ -302,7 +316,19 @@ class AssetImporter extends ItemImporter
         // Apply custom fields to asset attributes if they exist
         $customFieldsToSave = [];
         if (array_key_exists('custom_fields', $this->item)) {
+            // Encryption is applied by the SnipeCrypt cast, which only
+            // exists for fields in the asset model's fieldset. An encrypted
+            // field outside that fieldset would otherwise be stored in
+            // plain text, so it is encrypted here instead.
+            $casts = $asset->getCasts();
+
             foreach ($this->item['custom_fields'] as $custom_field => $val) {
+                if ($val !== null && $val !== ''
+                    && in_array($custom_field, $this->encryptedCustomFieldColumns, true)
+                    && ! array_key_exists($custom_field, $casts)) {
+                    $val = Crypt::encrypt($val);
+                }
+
                 $asset->{$custom_field} = $val;
                 $customFieldsToSave[$custom_field] = $val;
             }
