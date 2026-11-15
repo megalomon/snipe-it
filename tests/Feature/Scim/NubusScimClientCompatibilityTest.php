@@ -120,6 +120,48 @@ class NubusScimClientCompatibilityTest extends TestCase
         $this->assertContains(self::CORE_GROUP, array_column($schemas, 'id'));
     }
 
+    public function test_schemas_declare_the_types_the_client_validates_against()
+    {
+        $schemas = collect($this->scim('GET', '/scim/v2/Schemas')->assertOk()->json('Resources'))->keyBy('id');
+        $attribute = fn (string $schema, string $name) => collect($schemas[$schema]['attributes'])->firstWhere('name', $name);
+
+        $this->assertSame('boolean', $attribute(self::CORE_USER, 'active')['type']);
+        $this->assertSame('complex', $attribute(self::CORE_USER, 'groups')['type']);
+        $this->assertSame('complex', $attribute(self::CORE_USER, 'roles')['type']);
+        $this->assertSame('complex', $attribute(self::CORE_GROUP, 'members')['type']);
+
+        // Every attribute with sub-attributes must be complex (RFC 7643).
+        $walk = function (array $attributes) use (&$walk) {
+            foreach ($attributes as $attr) {
+                if (! empty($attr['subAttributes'])) {
+                    $this->assertSame('complex', $attr['type'], $attr['name'].' has sub-attributes but is not complex');
+                    $walk($attr['subAttributes']);
+                }
+            }
+        };
+        foreach ($schemas as $schema) {
+            $walk($schema['attributes']);
+        }
+    }
+
+    public function test_user_schema_extensions_have_distinct_names()
+    {
+        $names = collect($this->scim('GET', '/scim/v2/Schemas')->assertOk()->json('Resources'))->pluck('name', 'id');
+
+        $this->assertSame('EnterpriseUser', $names[self::ENTERPRISE_USER]);
+        $this->assertSame('GrokabilityUser', $names['urn:ietf:params:scim:schemas:extension:grokability:2.0:User']);
+        $this->assertSame($names->count(), $names->unique()->count());
+    }
+
+    public function test_full_sync_is_not_rate_limited()
+    {
+        config(['app.api_throttle_per_minute' => 3]);
+
+        for ($i = 0; $i < 6; $i++) {
+            $this->scim('GET', '/scim/v2/Users?filter='.rawurlencode('externalId eq "unknown-'.$i.'"'))->assertOk();
+        }
+    }
+
     public function test_client_user_agent_passes_the_default_api_user_agent_block_list()
     {
         $this->settings->set([

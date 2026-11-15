@@ -18,7 +18,10 @@ use Illuminate\Support\Facades\Route;
 
 SCIMRouteProvider::publicRoutes(); // Make sure to load public routes *FIRST*
 
-Route::middleware(['auth:api', CheckUserIsActivated::class, EnforceApiUserAgent::class.':allow_blank_user_agent', 'api-throttle:api', 'authorize:superadmin', ReconcileScimUserActivation::class])->group(function () {
+// No API rate limit here: identity providers push full syncs (one request
+// per user and group) and clients such as the Univention Nubus SCIM client
+// don't retry on HTTP 429. These routes are superuser-token only.
+Route::middleware(['auth:api', CheckUserIsActivated::class, EnforceApiUserAgent::class.':allow_blank_user_agent', 'authorize:superadmin', ReconcileScimUserActivation::class])->group(function () {
     SCIMRouteProvider::routes(
         [
             /*

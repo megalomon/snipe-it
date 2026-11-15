@@ -810,6 +810,55 @@ class UpdatableComplex extends Complex
     }
 }
 
+/**
+ * Schema node with two corrections to what /Schemas advertises, which
+ * strict clients (e.g. the Univention Nubus SCIM client) validate their
+ * payloads against:
+ *
+ *  - The library derives a schema's name from the last URN segment, so the
+ *    enterprise and Grokability extensions were both called "User" and one
+ *    shadowed the other. An explicit name can be given instead.
+ *  - Collections (groups, roles, members) come out as type "string"
+ *    although they have sub-attributes; any attribute with sub-attributes
+ *    is reported as "complex", as RFC 7643 requires.
+ */
+class SnipeSchema extends AttributeSchema
+{
+    public function __construct($name, $required = true, private ?string $displayName = null)
+    {
+        parent::__construct($name, $required);
+    }
+
+    public function generateSchema()
+    {
+        $result = parent::generateSchema();
+
+        if ($this->displayName !== null) {
+            $result['name'] = $this->displayName;
+        }
+
+        $result['attributes'] = self::withComplexTypes($result['attributes']);
+
+        return $result;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $attributes
+     * @return array<int, array<string, mixed>>
+     */
+    private static function withComplexTypes(array $attributes): array
+    {
+        foreach ($attributes as $index => $attribute) {
+            if (! empty($attribute['subAttributes'])) {
+                $attributes[$index]['type'] = 'complex';
+                $attributes[$index]['subAttributes'] = self::withComplexTypes($attribute['subAttributes']);
+            }
+        }
+
+        return $attributes;
+    }
+}
+
 class SnipeSCIMConfig
 {
     public function __construct() {}
@@ -869,10 +918,12 @@ class SnipeSCIMConfig
                 }
                 ),
                 new Meta('Users'),
-                (new AttributeSchema(Schema::SCHEMA_USER, true))->withSubAttributes(
+                (new SnipeSchema(Schema::SCHEMA_USER, true))->withSubAttributes(
                     eloquent('userName', 'username')->ensure('required'),
                     (new class('active', 'activated') extends Eloquent
                     {
+                        protected $type = 'boolean';
+
                         protected function doRead(&$object, $attributes = [])
                         {
                             return (bool) $object->activated; // need this extension to force boolean-ness
@@ -1152,7 +1203,7 @@ class SnipeSCIMConfig
                         eloquent('primary')->ensure('boolean')->default(false)
                     )->ensure('nullable', 'array', 'max:100')
                 ),
-                (new AttributeSchema(self::ENTERPRISE, false))->withSubAttributes(
+                (new SnipeSchema(self::ENTERPRISE, false, 'EnterpriseUser'))->withSubAttributes(
                     eloquent('employeeNumber', 'employee_num')->ensure('nullable'),
                     new MappedTable('department', 'department', Department::class, 'department_id', 'name'),
                     (new class('manager') extends UpdatableComplex
@@ -1208,7 +1259,7 @@ class SnipeSCIMConfig
                         }
                     }) // ->withSubAttributes() ... -> ensure() ?
                 ),
-                (new AttributeSchema(self::GROKABILITY, false))->withSubAttributes(
+                (new SnipeSchema(self::GROKABILITY, false, 'GrokabilityUser'))->withSubAttributes(
                     new MappedTable('location', 'location', Location::class, 'location_id', 'name'),
                     new SCIMCompanyAttribute('company'),
                     (new SCIMMultiCompanyArray('companies'))->ensure('array')->setMultiValued(true),
@@ -1252,7 +1303,7 @@ class SnipeSCIMConfig
                 ),
                 new EloquentWithRemove('externalId', 'scim_externalid'),
                 new Meta('Groups'),
-                (new AttributeSchema(Schema::SCHEMA_GROUP, true))->withSubAttributes(
+                (new SnipeSchema(Schema::SCHEMA_GROUP, true))->withSubAttributes(
                     eloquent('displayName', 'name')->ensure('required', 'min:3', function ($attribute, $value, $fail) {
                         // check if group does not exist or if it exists, it is the same group
                         $group = $this->getGroupClass()::where('name', $value)->first();
